@@ -1,139 +1,168 @@
 import 'package:flutter/material.dart';
-import 'package:get/get_instance/get_instance.dart';
-import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
-import 'package:get/route_manager.dart';
+import 'package:get/get.dart';
 import 'package:social_app/controller/todo_controller.dart';
 import 'package:social_app/screens/pages/add_data/add_todo_page.dart';
+import 'package:social_app/screens/pages/homePage/completePage.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatelessWidget {
+  HomeScreen({super.key});
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-
-  final TodoController controller =Get.put(TodoController());
+  final TodoController controller = Get.find();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text(
-          'Hello',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        backgroundColor: Colors.white,
+        title: const Text("My Tasks"),
+
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.check_circle),
+            onPressed: () => Get.to(() => CompletedPage()),
+          ),
+        ],
       ),
 
-      bottomSheet: Padding(
-        padding: const EdgeInsets.all(10),
-        child: GestureDetector(
-          onTap: () {
-            Get.to(()=>AddTodoPage());
-          },
-          child: Container(
-            height: 45,
-            width: MediaQuery.of(context).size.width,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.blue.shade400,
-            ),
-            child: Center(
-              child: Text(
-                "+ Add ",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+      body: Column(
+        children: [
+          // SEARCH
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              onChanged: (value) =>
+                  controller.searchTodo.value = value,
+              decoration: const InputDecoration(
+                hintText: "Search tasks...",
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
               ),
             ),
           ),
-        ),
-      ),
 
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            children: [
-              //search textbar
-              TextField(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: "Search here...",
-                  suffixIcon: TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      'SEARCH',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
+          // LIST
+          Expanded(
+            child: Obx(() {
+              final list = controller.filterList;
+
+              return ListView.builder(
+                itemCount: list.length,
+                itemBuilder: (context, index) {
+                  final todo = list[index];
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    child: ListTile(
+                      // CHECKBOX
+                      leading: Checkbox(
+                        value: todo.isDone,
+                        onChanged: (_) {
+                          _showCompleteDialog(context, todo);
+                        },
+                      ),
+
+                      // TITLE
+                      title: Text(
+                        todo.title,
+                        style: TextStyle(
+                          decoration: todo.isDone
+                              ? TextDecoration.lineThrough
+                              : TextDecoration.none,
+                          color: todo.isDone
+                              ? Colors.grey
+                              : Colors.black,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+
+                      subtitle: Text(todo.message),
+
+                      // ACTIONS
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () {
+                              Get.to(() => AddTodoPage(
+                                    index: controller.todoList
+                                        .indexOf(todo),
+                                    title: todo.title,
+                                    message: todo.message,
+                                  ));
+                            },
+                          ),
+
+                          IconButton(
+                            icon: const Icon(Icons.delete,
+                                color: Colors.red),
+                            onPressed: () {
+                              controller.deleteTodo(todo);
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 10),
-
-              //card
-              Obx(()=>ListView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: controller.todoList.length,
-                  itemBuilder: (context,index){
-
-                  final todo =controller.todoList[index];
-                  return Card(
-                   shape: RoundedRectangleBorder(
-                     borderRadius: BorderRadius.circular(8),
-                   ),
-                   color: Colors.grey.shade200,
-                   elevation: 4, 
-                   child: Padding(
-                     padding: const EdgeInsets.all(10),
-                     child: ListTile(
-                       title: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           Text(todo.title, style: TextStyle(fontSize: 14)),
-                           SizedBox(height: 4),
-                           Text(todo.message, style: TextStyle(fontSize: 14)),
-                           
-                         ],
-                       ),
-                       // for deleteing card
-                       trailing: Row(
-                         mainAxisSize: MainAxisSize.min,
-                         children: [
-                           IconButton(
-                           onPressed: (){
-                            Get.to(()=>AddTodoPage(
-                              index:index,
-                              title:todo.title,
-                              message:todo.message,
-                            ));
-                           }, icon: Icon(Icons.edit)),
-                           IconButton(
-                           onPressed: (){
-                            controller.deleteTodo(index);
-                           }, icon: Icon(Icons.delete,
-                           color: Colors.redAccent,)),
-                         ],
-                       ),
-                     ),
-                   ),
-                 );
-                 })
-              ),
-            ],
+                  );
+                },
+              );
+            }),
           ),
-        ),
+        ],
       ),
+
+      // ADD BUTTON
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Get.to(() => AddTodoPage()),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  // CONFIRM DIALOG
+  void _showCompleteDialog(BuildContext context, todo) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: const Text("Mark as Completed?"),
+          content: const Text(
+            "This task will move to Completed page.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+              ),
+              onPressed: () {
+                controller.toggleTodoDone(todo);
+
+                Navigator.pop(context);
+
+                Get.snackbar(
+                  "Completed 🎉",
+                  "Task moved to Completed",
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white,
+                );
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
     );
   }
 }

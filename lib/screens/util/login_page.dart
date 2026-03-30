@@ -5,7 +5,7 @@ import 'package:social_app/screens/util/login_controller.dart';
 class LoginPage extends StatelessWidget {
   LoginPage({super.key});
 
-  final LoginController controller = Get.put(LoginController());
+  final LoginController controller = Get.find();
 
   @override
   Widget build(BuildContext context) {

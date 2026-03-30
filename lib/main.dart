@@ -1,19 +1,25 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:social_app/screens/util/login_page.dart';
+import 'package:social_app/controller/todo_controller.dart';
+import 'package:social_app/mainScreen.dart';
+import 'package:social_app/screens/util/login_controller.dart';
 
-void main(){
-  runApp(MyApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  Get.put(TodoController());
+  Get.put(LoginController(),permanent: true);
+  runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget{
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-   return GetMaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: LoginPage(),
-   );
+    return GetMaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: MainScreen(),
+    );
   }
 }

@@ -1,105 +1,189 @@
 import 'package:flutter/material.dart';
-import 'package:get/get_instance/get_instance.dart';
-import 'package:get/route_manager.dart';
+import 'package:get/get.dart';
 import 'package:social_app/controller/todo_controller.dart';
+import 'package:social_app/screens/pages/homePage/speechController.dart';
 
 class AddTodoPage extends StatefulWidget {
   final bool isEdit;
   final int? index;
   final String? title;
   final String? message;
-  const AddTodoPage({super.key, this.index, this.message, this.title, this.isEdit=true});
+
+  const AddTodoPage({
+    super.key,
+    this.index,
+    this.message,
+    this.title,
+    this.isEdit = false,
+  });
 
   @override
   State<AddTodoPage> createState() => _AddTodoPageState();
 }
 
 class _AddTodoPageState extends State<AddTodoPage> {
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController messageController = TextEditingController();
 
-  TextEditingController titleController =TextEditingController();
-  TextEditingController messageController =TextEditingController();
-  final TodoController controller=Get.find();
+  final TodoController controller = Get.find();
+  final SpeechController speechController = Get.put(SpeechController());
+
+  // true = title, false = message
+  RxBool isTitleField = true.obs;
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
-    if(widget.isEdit){
+
+    if (widget.isEdit) {
       titleController.text = widget.title ?? "";
-      messageController.text =widget.message??"";
+      messageController.text = widget.message ?? "";
     }
+  }
+
+  void startSpeech(bool forTitle) {
+    isTitleField.value = forTitle;
+    speechController.startListening();
+  }
+
+  void bindSpeechToField() {
+    if (speechController.text.value.isEmpty) return;
+
+    if (isTitleField.value) {
+      titleController.text = speechController.text.value;
+      titleController.selection = TextSelection.fromPosition(
+        TextPosition(offset: titleController.text.length),
+      );
+    } else {
+      messageController.text = speechController.text.value;
+      messageController.selection = TextSelection.fromPosition(
+        TextPosition(offset: messageController.text.length),
+      );
+    }
+  }
+
+  Widget buildField({
+    required String label,
+    required TextEditingController controller,
+    required bool isTitle,
+    int maxLines = 1,
+  }) {
+    return Obx(() {
+      bindSpeechToField();
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          TextField(
+            controller: controller,
+            maxLines: maxLines,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.grey.shade200,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  speechController.isListening.value
+                      ? Icons.mic
+                      : Icons.mic_none,
+                  color: Colors.blue,
+                ),
+                onPressed: () => startSpeech(isTitle),
+              ),
+            ),
+          ),
+
+          if (speechController.isListening.value)
+            const Padding(
+              padding: EdgeInsets.only(top: 5),
+              child: Text(
+                "Listening...",
+                style: TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
+        ],
+      );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("text",
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold
-        ),),
+        title: const Text(
+          "Add Todo",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
       ),
 
       body: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            addcard("Title", controller: titleController),
-            SizedBox(height: 16,),
-            addcard('Message', controller: messageController, isMessage: true),
-            SizedBox(height: 20,),
+            buildField(
+              label: "Title",
+              controller: titleController,
+              isTitle: true,
+            ),
+
+            const SizedBox(height: 16),
+
+            buildField(
+              label: "Message",
+              controller: messageController,
+              isTitle: false,
+              maxLines: 5,
+            ),
+
+            const SizedBox(height: 25),
 
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue.shade300,
-                shape: RoundedRectangleBorder(),
-                minimumSize: Size(MediaQuery.of(context).size.width, 45)
+                backgroundColor: Colors.blue,
+                minimumSize: Size(MediaQuery.of(context).size.width, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              onPressed: (){
-                if(widget.isEdit){
-                  controller.editTodo(widget.index!, titleController.text, messageController.text);
+              onPressed: () {
+                if (widget.isEdit && widget.index != null) {
+                  controller.editTodo(
+                    widget.index!,
+                    titleController.text,
+                    messageController.text,
+                  );
+                } else {
+                  controller.addTodo(
+                    titleController.text,
+                    messageController.text,
+                  );
                 }
-                else{
-                  controller.addTodo(titleController.text,
-                 messageController.text);
-                }
-                 Get.back();
-              }, 
-              child: Text('SAVE',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.white
-              ),))
+
+                Get.back();
+              },
+              child: const Text(
+                "SAVE",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            )
           ],
         ),
       ),
     );
   }
-}
-
-Widget addcard(String title, {bool isMessage = false, TextEditingController? controller}){
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(title, style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold
-      ),),
-      SizedBox(height: 4,),
-       TextField(
-        controller: controller,
-        maxLines: isMessage ? 5 : 1,
-        decoration: InputDecoration(
-          hintText: isMessage ? "Add your message" : "",
-          filled: true,
-          fillColor: Colors.grey.shade200,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      ),
-    ],
-  );
 }
